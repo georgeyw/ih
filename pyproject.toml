@@ -1,0 +1,6 @@
+[tool.pyright]
+include = ["src"]
+
+reportShadowedImports = false
+
+pythonVersion = "3.9"
