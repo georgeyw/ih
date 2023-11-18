@@ -4,12 +4,13 @@ import warnings
 import torch.nn as nn
 
 from transformer_lens import HookedTransformer, HookedTransformerConfig
+from ih.utils import read_model_config
 
 
 def build_model(config_name: str = None, **kwargs) -> nn.Module:
     if config_name is None:
         config_name = 'default-L1.json'
-    config = _read_model_config(config_name)
+    config = read_model_config(config_name)
 
     original_config = config.copy()
     config.update(kwargs)
@@ -23,16 +24,3 @@ def build_model(config_name: str = None, **kwargs) -> nn.Module:
 
     model = HookedTransformer(HookedTransformerConfig(**config))
     return model
-
-
-def _read_model_config(config_name) -> dict:
-    path = _get_model_config_path(config_name)
-    with open(path, 'r', encoding='utf-8') as f:
-        config = json.load(f)
-        return config
-
-
-def _get_model_config_path(config_name: str) -> str:
-    if not config_name.endswith('.json'):
-        config_name += '.json'
-    return os.path.join(os.path.dirname(__file__), 'model_configs', config_name)

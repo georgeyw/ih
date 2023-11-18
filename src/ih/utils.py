@@ -9,10 +9,6 @@ import wandb
 from huggingface_hub import HfApi
 from transformer_lens import HookedTransformer, HookedTransformerConfig
 
-from dgp import _get_dgp_config_path
-from model import _get_model_config_path
-from train import _get_train_config_path
-
 
 def local_env_setup() -> None:
     rel_path = os.path.join(os.path.dirname(__file__), '..', '.env')
@@ -29,6 +25,49 @@ def colab_env_setup() -> None:
 
     wandb.login(key=os.environ['WANDB_API_KEY'])
     HF_API.token = os.environ['HF_API_KEY']    
+
+
+############################
+####### config utils #######
+############################
+
+def read_dgp_config(config_name) -> dict:
+    path = _get_dgp_config_path(config_name)
+    with open(path, 'r', encoding='utf-8') as f:
+        config = json.load(f)
+        return config
+
+
+def _get_dgp_config_path(config_name: str) -> str:
+    if not config_name.endswith('.json'):
+        config_name += '.json'
+    return os.path.join(os.path.dirname(__file__), 'dgp_configs', config_name)
+
+
+def read_model_config(config_name) -> dict:
+    path = _get_model_config_path(config_name)
+    with open(path, 'r', encoding='utf-8') as f:
+        config = json.load(f)
+        return config
+
+
+def _get_model_config_path(config_name: str) -> str:
+    if not config_name.endswith('.json'):
+        config_name += '.json'
+    return os.path.join(os.path.dirname(__file__), 'model_configs', config_name)
+
+
+def read_train_config(config_name) -> dict:
+    path = _get_train_config_path(config_name)
+    with open(path, 'r', encoding='utf-8') as f:
+        config = json.load(f)
+        return config
+
+
+def _get_train_config_path(config_name: str) -> str:
+    if not config_name.endswith('.json'):
+        config_name += '.json'
+    return os.path.join(os.path.dirname(__file__), 'train_configs', config_name)
 
 
 ############################

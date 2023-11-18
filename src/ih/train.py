@@ -5,14 +5,15 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from transformer_lens.utils import lm_cross_entropy_loss
 
-from api_utils import create_hf_repo
-from api_utils import upload_hf_model
-from api_utils import upload_hf_model_configs
-from constants import CHECKPOINT_EVERY
-from constants import CHECKPOINT_ZERO_PAD
-from constants import LOG_EVERY
-from dgp import build_dgp_for_model
-from model import build_model
+from ih.utils import create_hf_repo
+from ih.utils import upload_hf_model
+from ih.utils import upload_hf_model_configs
+from ih.utils import read_train_config
+from ih.constants import CHECKPOINT_EVERY
+from ih.constants import CHECKPOINT_ZERO_PAD
+from ih.constants import LOG_EVERY
+from ih.dgp import build_dgp_for_model
+from ih.model import build_model
 
 
 # TODO(george): add wandb logging
@@ -32,7 +33,7 @@ def train(model_config_name: str,
                                 dgp_config_name=dgp_config_name, 
                                 train_config_name=train_config_name)
     
-    train_config = _read_train_config(train_config_name)
+    train_config = read_train_config(train_config_name)
     if train_config['seed'] is not None:
         torch.manual_seed(train_config['seed'])
     model = build_model(model_config_name)
@@ -77,19 +78,6 @@ def _training_loop(model: nn.Module,
             if c > train_config['max_steps']:
                 break
     return losses
-
-
-def _read_train_config(config_name) -> dict:
-    path = _get_train_config_path(config_name)
-    with open(path, 'r', encoding='utf-8') as f:
-        config = json.load(f)
-        return config
-
-
-def _get_train_config_path(config_name: str) -> str:
-    if not config_name.endswith('.json'):
-        config_name += '.json'
-    return os.path.join(os.path.dirname(__file__), 'train_configs', config_name)
 
 
 def _num_samples(train_config: dict) -> int:

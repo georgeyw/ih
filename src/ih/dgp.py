@@ -1,11 +1,11 @@
 from typing import List
 
-import json
-import os
 import random
 import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset
+
+from ih.utils import read_dgp_config
 
 
 # generates ~1.5M tokens per second
@@ -103,22 +103,9 @@ class DGP:
 def build_dgp_for_model(model: nn.Module, dgp_config_name: str = None) -> DGP:
     if dgp_config_name is None:
         dgp_config_name = 'default.json'
-    dgp_config = _read_dgp_config(dgp_config_name)
+    dgp_config = read_dgp_config(dgp_config_name)
     dgp_config['ctx_length'] = model.config['n_ctx']
     dgp_config['num_tokens'] = model.config['d_vocab']
     dgp_config['seed'] = model.config['seed']
     dgp = DGP(**dgp_config)
     return dgp
-
-
-def _read_dgp_config(config_name) -> dict:
-    path = _get_dgp_config_path(config_name)
-    with open(path, 'r', encoding='utf-8') as f:
-        config = json.load(f)
-        return config
-
-
-def _get_dgp_config_path(config_name: str) -> str:
-    if not config_name.endswith('.json'):
-        config_name += '.json'
-    return os.path.join(os.path.dirname(__file__), 'dgp_configs', config_name)
