@@ -51,12 +51,16 @@ def _training_loop(model: nn.Module,
 
 
 def _read_train_config(config_name) -> dict:
-    if not config_name.endswith('.json'):
-        config_name += '.json'
-    path = os.path.join(os.path.dirname(__file__), 'train_configs', config_name)
+    path = _get_train_config_path(config_name)
     with open(path, 'r', encoding='utf-8') as f:
         config = json.load(f)
         return config
+    
+
+def _get_train_config_path(config_name: str) -> str:
+    if not config_name.endswith('.json'):
+        config_name += '.json'
+    return os.path.join(os.path.dirname(__file__), 'train_configs', config_name)
 
 
 def _num_samples(train_config: dict) -> int:

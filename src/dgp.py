@@ -112,9 +112,13 @@ def build_dgp_for_model(model: nn.Module, dgp_config_name: str = None) -> DGP:
 
 
 def _read_dgp_config(config_name) -> dict:
-    if not config_name.endswith('.json'):
-        config_name += '.json'
-    path = os.path.join(os.path.dirname(__file__), 'dgp_configs', config_name)
+    path = _get_dgp_config_path(config_name)
     with open(path, 'r', encoding='utf-8') as f:
         config = json.load(f)
         return config
+
+
+def _get_dgp_config_path(config_name: str) -> str:
+    if not config_name.endswith('.json'):
+        config_name += '.json'
+    return os.path.join(os.path.dirname(__file__), 'dgp_configs', config_name)
