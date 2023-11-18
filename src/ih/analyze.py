@@ -7,6 +7,7 @@ from ih.utils import read_model_config
 from ih.utils import read_train_config
 
 
+# TODO(george): finish setting up wandb
 def init_wandb(model_config_name: str, dgp_config_name: str, train_config_name: str):
     run_name = _build_run_name(model_config_name, dgp_config_name, train_config_name)
     wandb.init(entity=WANDB_ENTITY, project=WANDB_PROJECT, name=run_name)

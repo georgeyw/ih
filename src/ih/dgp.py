@@ -104,8 +104,8 @@ def build_dgp_for_model(model: nn.Module, dgp_config_name: str = None) -> DGP:
     if dgp_config_name is None:
         dgp_config_name = 'default.json'
     dgp_config = read_dgp_config(dgp_config_name)
-    dgp_config['ctx_length'] = model.config['n_ctx']
-    dgp_config['num_tokens'] = model.config['d_vocab']
-    dgp_config['seed'] = model.config['seed']
+    dgp_config['ctx_length'] = model.cfg.n_ctx
+    dgp_config['num_tokens'] = model.cfg.d_vocab
+    dgp_config['seed'] = model.cfg.seed
     dgp = DGP(**dgp_config)
     return dgp

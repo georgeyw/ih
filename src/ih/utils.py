@@ -12,7 +12,7 @@ from transformer_lens import HookedTransformer, HookedTransformerConfig
 
 
 def local_env_setup() -> None:
-    rel_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+    rel_path = os.path.join(os.path.dirname(__file__), '../..', '.env')
     dotenv.load_dotenv(rel_path)
 
     wandb.login(key=os.environ['WANDB_API_KEY'])
