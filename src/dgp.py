@@ -25,8 +25,10 @@ class DGP:
         self.num_tokens = num_tokens
         self.alphabet = list(range(num_tokens))
 
-        self.bigrams = bigrams or [[self.alphabet[0], self.alphabet[1]], [self.alphabet[3], self.alphabet[4]]]
-        self.trigrams = trigrams or [[self.alphabet[2], self.alphabet[3], self.alphabet[5]]]
+        self.bigrams = bigrams or [[self.alphabet[0], self.alphabet[1]],
+                                   [self.alphabet[3], self.alphabet[4]]]
+        self.trigrams = trigrams or [
+            [self.alphabet[2], self.alphabet[3], self.alphabet[5]]]
         self.induction_length = induction_length
 
         self.bigram_freq = bigram_freq
@@ -45,12 +47,14 @@ class DGP:
         if self.seed is None:
             samples = [self._generate_sample() for _ in range(num_samples)]
         else:
-            samples = [self._generate_sample(seed = self.seed + i) for i in range(num_samples)]
+            samples = [self._generate_sample(
+                seed=self.seed + i) for i in range(num_samples)]
         return torch.stack(samples)
-    
-    def _generate_sample(self, seed = None):
+
+    def _generate_sample(self, seed=None):
         random.seed(seed)
-        induction_seq = [random.choice(self.alphabet) for _ in range(self.induction_length)]
+        induction_seq = [random.choice(self.alphabet)
+                         for _ in range(self.induction_length)]
         sequence = []
         i = 0
         while i < self.ctx_length:
@@ -70,7 +74,7 @@ class DGP:
             sequence += new_tokens
         sequence = sequence[:self.ctx_length]
         return torch.tensor(sequence)
-    
+
     def _validate_params(self):
         assert self.ctx_length > 0
         assert self.induction_length > 0
@@ -111,7 +115,6 @@ def _read_dgp_config(config_name) -> dict:
     if not config_name.endswith('.json'):
         config_name += '.json'
     path = os.path.join(os.path.dirname(__file__), 'dgp_configs', config_name)
-    with open(path, 'r') as f:
+    with open(path, 'r', encoding='utf-8') as f:
         config = json.load(f)
         return config
-    

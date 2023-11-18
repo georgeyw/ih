@@ -5,28 +5,31 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from transformer_lens.utils import lm_cross_entropy_loss
 
-from constants import LOG_EVERY, CHECKPOINT_EVERY
+from constants import LOG_EVERY
 from dgp import build_dgp_for_model
 from model import build_model
 
 
 # TODO(george): add wandb logging
-def train(model_config_name: str, dgp_config_name: str, train_config_name: str, device: str = 'cuda'):
+def train(model_config_name: str,
+          dgp_config_name: str,
+          train_config_name: str,
+          device: str = 'cuda'):
     train_config = _read_train_config(train_config_name)
     model = build_model(model_config_name)
     dgp = build_dgp_for_model(model, dgp_config_name)
     dataset = dgp.generate_dataset(_num_samples(train_config))
     loader = DataLoader(dataset, batch_size=train_config['batch_size'])
-    optimizer = torch.optim.AdamW(model.parameters(), 
+    optimizer = torch.optim.AdamW(model.parameters(),
                                   lr=train_config['lr'],
                                   weight_decay=train_config['weight_decay'])
     losses = _training_loop(model, optimizer, loader, train_config, device=device)
     return losses
-    
 
-def _training_loop(model: nn.Module, 
-                   optimizer: torch.optim.Optimizer, 
-                   data_loader: DataLoader, 
+
+def _training_loop(model: nn.Module,
+                   optimizer: torch.optim.Optimizer,
+                   data_loader: DataLoader,
                    train_config: dict,
                    device: str = 'cuda'):
     losses = []
@@ -51,7 +54,7 @@ def _read_train_config(config_name) -> dict:
     if not config_name.endswith('.json'):
         config_name += '.json'
     path = os.path.join(os.path.dirname(__file__), 'train_configs', config_name)
-    with open(path, 'r') as f:
+    with open(path, 'r', encoding='utf-8') as f:
         config = json.load(f)
         return config
 
