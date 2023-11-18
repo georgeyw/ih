@@ -1,0 +1,11 @@
+{
+    "d_model": 8,
+    "d_head": 8,
+    "n_ctx": 32,
+    "n_heads": 1,
+    "d_vocab": 10,
+    "normalization_type": "LN",
+    "attn_only": true,
+    "seed": 0,
+    "positional_embedding_type": "shortformer"
+}
