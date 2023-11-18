@@ -7,6 +7,7 @@ import torch
 import torch.nn as nn
 import wandb
 from huggingface_hub import HfApi
+from prettytable import PrettyTable
 from transformer_lens import HookedTransformer, HookedTransformerConfig
 
 
@@ -213,3 +214,21 @@ def _upload_hf_file(path_or_fileobj, path_in_repo, repo_id, repo_type, exists_ok
                        path_in_repo=path_in_repo,
                        repo_id=repo_id,
                        repo_type=repo_type)
+
+
+############################
+####### other stuff ########
+############################
+
+def count_parameters(model):
+    table = PrettyTable(["Modules", "Parameters"])
+    total_params = 0
+    for name, parameter in model.named_parameters():
+        if not parameter.requires_grad:
+            continue
+        params = parameter.numel()
+        table.add_row([name, params])
+        total_params += params
+    print(table)
+    print(f"Total Trainable Params: {total_params} ({total_params//1e6}M)")
+    return total_params
