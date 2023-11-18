@@ -7,6 +7,6 @@
     "d_vocab": 10,
     "normalization_type": "LN",
     "attn_only": true,
-    "seed": 0,
-    "positional_embedding_type": "shortformer"
+    "positional_embedding_type": "shortformer",
+    "seed": 0
 }
