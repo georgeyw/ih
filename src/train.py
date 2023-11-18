@@ -55,7 +55,7 @@ def _read_train_config(config_name) -> dict:
     with open(path, 'r', encoding='utf-8') as f:
         config = json.load(f)
         return config
-    
+
 
 def _get_train_config_path(config_name: str) -> str:
     if not config_name.endswith('.json'):

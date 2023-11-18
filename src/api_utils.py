@@ -1,3 +1,4 @@
+import json
 import os
 import tempfile
 
@@ -6,6 +7,7 @@ import torch
 import torch.nn as nn
 import wandb
 from huggingface_hub import HfApi
+from transformer_lens import HookedTransformer, HookedTransformerConfig
 
 from dgp import _get_dgp_config_path
 from model import _get_model_config_path
@@ -28,11 +30,53 @@ HF_API = HfApi(
     endpoint="https://huggingface.co",
     token=None,
 )
+HF_MODEL_NAME = 'model.pth'
 
 
 def create_hf_repo(name: str, **kwargs) -> str:
     repo_name = os.environ['HF_AUTHOR'] + '/' + name
     return HF_API.create_repo(repo_name, **kwargs)
+
+
+def load_hf_model(model_name: str, checkpoint_name: str = None) -> nn.Module:
+    repo_id = os.environ['HF_AUTHOR'] + '/' + model_name
+    assert HF_API.token is not None, "Missing HF token"
+    assert _check_model_exists(model_name), f"Model repo at {repo_id} does not exist"
+
+    if checkpoint_name is None:
+        filename = HF_MODEL_NAME
+    else:
+        if not checkpoint_name.endswith('.pth'):
+            checkpoint_name += '.pth'
+        filename = f'checkpoints/{checkpoint_name}'
+    model_path = HF_API.hf_hub_download(repo_id, repo_type='model', filename=filename)
+
+    config = HookedTransformerConfig(**load_hf_config(model_name, 'model'))
+    state_dict = torch.load(model_path)
+
+    model = HookedTransformer(config)
+    model.load_state_dict(state_dict)
+    return model
+
+
+def load_hf_config(model_name: str, config_type: str) -> dict:
+    repo_id = os.environ['HF_AUTHOR'] + '/' + model_name
+    assert HF_API.token is not None, "Missing HF token"
+    assert _check_model_exists(model_name), f"Model repo at {repo_id} does not exist"
+
+    filename = None
+    files = HF_API.list_files_info(repo_id=repo_id, repo_type='model')
+    for file in files:
+        if file.path.startswith(f'configs/{config_type}/'):
+            if filename is not None:
+                raise ValueError(
+                    f"Multiple {config_type} configs found in model repo at {repo_id}.")
+            filename = file.path
+
+    config_path = HF_API.hf_hub_download(repo_id, repo_type='model', filename=filename)
+    with open(config_path, 'r', encoding='utf-8') as f:
+        config = json.load(f)
+        return config
 
 
 def upload_hf_model_configs(model_name: str,
@@ -55,23 +99,23 @@ def upload_hf_model_configs(model_name: str,
     dgp_config_path = _get_dgp_config_path(dgp_config_name)
     train_config_path = _get_train_config_path(train_config_name)
 
-    _upload_hf_file(path_or_fileobj=model_config_path, 
-                        path_in_repo=f'configs/model/{model_config_name}', 
-                        repo_id=repo_id, 
-                        repo_type='model')
-    _upload_hf_file(path_or_fileobj=dgp_config_path, 
-                        path_in_repo=f'configs/dgp/{dgp_config_name}', 
-                        repo_id=repo_id, 
-                        repo_type='model')
-    _upload_hf_file(path_or_fileobj=train_config_path, 
-                        path_in_repo=f'configs/train/{train_config_name}', 
-                        repo_id=repo_id, 
-                        repo_type='model')
+    _upload_hf_file(path_or_fileobj=model_config_path,
+                    path_in_repo=f'configs/model/{model_config_name}',
+                    repo_id=repo_id,
+                    repo_type='model')
+    _upload_hf_file(path_or_fileobj=dgp_config_path,
+                    path_in_repo=f'configs/dgp/{dgp_config_name}',
+                    repo_id=repo_id,
+                    repo_type='model')
+    _upload_hf_file(path_or_fileobj=train_config_path,
+                    path_in_repo=f'configs/train/{train_config_name}',
+                    repo_id=repo_id,
+                    repo_type='model')
 
 
 def upload_hf_model(model: nn.Module,
-                     model_name: str,
-                     checkpoint_name: str = None) -> str:
+                    model_name: str,
+                    checkpoint_name: str = None) -> str:
     """Creates a temporary file to save the model to, then uploads it to Hugging Face. 
     If a checkpoint name is provided, the model will be saved to a checkpoint file with that name."""
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -85,16 +129,16 @@ def upload_hf_model(model: nn.Module,
         assert _check_model_exists(model_name), f"Model repo at {repo_id} does not exist"
 
         if checkpoint_name is None:
-            path_in_repo = 'model.pth'
+            path_in_repo = HF_MODEL_NAME
         else:
             if not checkpoint_name.endswith('.pth'):
                 checkpoint_name += '.pth'
-            path_in_repo = f'checkpoints/{checkpoint_name}.pth'
+            path_in_repo = f'checkpoints/{checkpoint_name}'
 
-        _upload_hf_file(path_or_fileobj=model_path, 
-                           path_in_repo=path_in_repo, 
-                           repo_id=repo_id, 
-                           repo_type='model')
+        _upload_hf_file(path_or_fileobj=model_path,
+                        path_in_repo=path_in_repo,
+                        repo_id=repo_id,
+                        repo_type='model')
 
 
 def _check_model_exists(model_name: str) -> bool:
@@ -115,8 +159,9 @@ def _check_file_exists(repo_id: str, path_in_repo: str) -> bool:
 
 def _upload_hf_file(path_or_fileobj, path_in_repo, repo_id, repo_type, exists_ok=False) -> None:
     if not exists_ok and _check_file_exists(repo_id, path_in_repo):
-        raise ValueError(f"File already exists at {repo_id}/{path_in_repo}. Set exists_ok=True to overwrite.")
-    HF_API.upload_file(path_or_fileobj=path_or_fileobj, 
-                       path_in_repo=path_in_repo, 
-                       repo_id=repo_id, 
+        raise ValueError(
+            f"File already exists at {repo_id}/{path_in_repo}. Set exists_ok=True to overwrite.")
+    HF_API.upload_file(path_or_fileobj=path_or_fileobj,
+                       path_in_repo=path_in_repo,
+                       repo_id=repo_id,
                        repo_type=repo_type)
