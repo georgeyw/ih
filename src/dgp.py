@@ -1,11 +1,15 @@
 from typing import List
 
+import json
+import os
 import random
 import torch
+import torch.nn as nn
 from torch.utils.data import TensorDataset
 
 
 # generates ~1.5M tokens per second
+# do I want this to be strings or ints?
 class DGP:
     def __init__(self,
                  ctx_length: int = 32,
@@ -90,3 +94,24 @@ class DGP:
                 assert trigram[0] in self.alphabet
                 assert trigram[1] in self.alphabet
                 assert trigram[2] in self.alphabet
+
+
+def build_dgp_for_model(model: nn.Module, dgp_config_name: str = None) -> DGP:
+    if dgp_config_name is None:
+        dgp_config_name = 'default.json'
+    dgp_config = _read_dgp_config(dgp_config_name)
+    dgp_config['ctx_length'] = model.config['n_ctx']
+    dgp_config['num_tokens'] = model.config['d_vocab']
+    dgp_config['seed'] = model.config['seed']
+    dgp = DGP(**dgp_config)
+    return dgp
+
+
+def _read_dgp_config(config_name) -> dict:
+    if not config_name.endswith('.json'):
+        config_name += '.json'
+    path = os.path.join(os.path.dirname(__file__), 'dgp_configs', config_name)
+    with open(path, 'r') as f:
+        config = json.load(f)
+        return config
+    

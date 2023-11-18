@@ -1,0 +1,4 @@
+LOG_EVERY = 100
+CHECKPOINT_EVERY = 100
+WANDB_ENTITY = 'devinterp'
+WANDB_PROJECT = 'induction-heads'

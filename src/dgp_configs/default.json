@@ -1,0 +1,6 @@
+{
+    "induction_length": 3,
+    "bigram_freq": 0.1,
+    "trigram_freq": 0.1,
+    "induction_freq": 0.1
+}
