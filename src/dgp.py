@@ -9,7 +9,7 @@ from torch.utils.data import TensorDataset
 
 
 # generates ~1.5M tokens per second
-# do I want this to be strings or ints?
+# do I want this to be strings or ints? I think ints
 class DGP:
     def __init__(self,
                  ctx_length: int = 32,
