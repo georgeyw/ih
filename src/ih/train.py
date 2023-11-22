@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from tqdm import tqdm
 from torch.utils.data import DataLoader
 from transformer_lens.utils import lm_cross_entropy_loss
 
@@ -62,7 +63,7 @@ def _training_loop(model: nn.Module,
     losses = []
     for epoch in range(train_config['num_epochs']):
         print(f"Starting epoch: {epoch}")
-        for c, batch in enumerate(data_loader):
+        for c, batch in enumerate(tqdm(data_loader)):
             optimizer.zero_grad()
             tokens = batch[0].to(device)
             logits = model(tokens)

@@ -3,6 +3,7 @@ from typing import List
 import random
 import torch
 import torch.nn as nn
+from tqdm import tqdm
 from torch.utils.data import TensorDataset
 
 from ih.utils import read_dgp_config
@@ -44,11 +45,13 @@ class DGP:
         return dataset
 
     def generate_samples(self, num_samples):
+        samples = []
         if self.seed is None:
-            samples = [self._generate_sample() for _ in range(num_samples)]
+            for _ in tqdm(range(num_samples)):
+                samples.append(self._generate_sample())
         else:
-            samples = [self._generate_sample(
-                seed=self.seed + i) for i in range(num_samples)]
+            for i in tqdm(range(num_samples)):
+                samples.append(self._generate_sample(seed=self.seed + i))
         return torch.stack(samples)
 
     def _generate_sample(self, seed=None):
