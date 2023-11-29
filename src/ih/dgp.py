@@ -15,13 +15,14 @@ class DGP:
     def __init__(self,
                  ctx_length: int = 32,
                  num_tokens: int = 10,
-                 bigrams: List[List[str]] = None,
-                 trigrams: List[List[str]] = None,
+                 bigrams: List[List[int]] = None,
+                 trigrams: List[List[int]] = None,
                  induction_length: int = 3,
                  bigram_freq: float = 0.1,
                  trigram_freq: float = 0.1,
                  induction_freq: float = 0.1,
-                 seed: int = None):
+                 seed: int = None,
+                 device: str = 'cpu'):
         self.ctx_length = ctx_length
         self.num_tokens = num_tokens
         self.alphabet = list(range(num_tokens))
@@ -37,6 +38,7 @@ class DGP:
         self.induction_freq = induction_freq
 
         self.seed = seed
+        self.device = device
         self._validate_params()
 
     def generate_dataset(self, num_samples):
@@ -52,9 +54,9 @@ class DGP:
         else:
             for i in tqdm(range(num_samples)):
                 samples.append(self._generate_sample(seed=self.seed + i))
-        return torch.stack(samples)
+        return torch.stack(samples).to(self.device)
 
-    def _generate_sample(self, seed=None):
+    def _generate_sample(self, return_i_seq: bool = False, seed: int = None):
         random.seed(seed)
         induction_seq = [random.choice(self.alphabet)
                          for _ in range(self.induction_length)]
@@ -76,7 +78,10 @@ class DGP:
                 i += 1
             sequence += new_tokens
         sequence = sequence[:self.ctx_length]
-        return torch.tensor(sequence)
+
+        if return_i_seq:
+            return torch.tensor(sequence).to(self.device), torch.tensor(induction_seq).to(self.device)
+        return torch.tensor(sequence).to(self.device)
 
     def _validate_params(self):
         assert self.ctx_length > 0

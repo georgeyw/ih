@@ -20,7 +20,7 @@ def train(model_config_name: str,
           train_config_name: str,
           run_name: str = None,
           save_checkpoints: bool = False,
-          device: str = 'cuda'):
+          device: str = 'cpu'):
     if save_checkpoints:
         if run_name is None:
             raise ValueError("Must provide run_name if saving checkpoints")
@@ -59,7 +59,7 @@ def _training_loop(model: nn.Module,
                    train_config: dict,
                    run_name: str = None,
                    save_checkpoints: bool = False,
-                   device: str = 'cuda'):
+                   device: str = 'cpu'):
     losses = []
     for epoch in range(train_config['num_epochs']):
         print(f"Starting epoch: {epoch}")

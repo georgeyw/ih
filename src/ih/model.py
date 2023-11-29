@@ -5,7 +5,7 @@ from transformer_lens import HookedTransformer, HookedTransformerConfig
 from ih.utils import read_model_config
 
 
-def build_model(config_name: str = None, device = 'cuda', **kwargs) -> nn.Module:
+def build_model(config_name: str = None, device = 'cpu', **kwargs) -> nn.Module:
     if config_name is None:
         config_name = 'default-L1.json'
     config = read_model_config(config_name)
