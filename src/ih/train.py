@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import torch
 import torch.nn as nn
 from tqdm import tqdm
@@ -20,6 +22,7 @@ def train(model_config_name: str,
           train_config_name: str,
           run_name: str = None,
           save_checkpoints: bool = False,
+          return_checkpoints: bool = False,
           device: str = 'cpu'):
     if save_checkpoints:
         if run_name is None:
@@ -40,16 +43,19 @@ def train(model_config_name: str,
     optimizer = torch.optim.AdamW(model.parameters(),
                                   lr=train_config['learning_rate'],
                                   weight_decay=train_config['weight_decay'])
-    losses = _training_loop(model, 
-                            optimizer, 
-                            loader, 
-                            train_config, 
-                            run_name=run_name,
-                            save_checkpoints=save_checkpoints, 
-                            device=device)
+    losses, checkpoints = _training_loop(model, 
+                                         optimizer, 
+                                         loader, 
+                                         train_config, 
+                                         run_name=run_name,
+                                         save_checkpoints=save_checkpoints,
+                                         return_checkpoints=return_checkpoints,
+                                         device=device)
     
     if save_checkpoints:
         upload_hf_model(model, run_name)
+    if return_checkpoints:
+        return losses, checkpoints
     return losses, model
 
 
@@ -59,8 +65,10 @@ def _training_loop(model: nn.Module,
                    train_config: dict,
                    run_name: str = None,
                    save_checkpoints: bool = False,
+                   return_checkpoints: bool = False,
                    device: str = 'cpu'):
     losses = []
+    checkpoints = []
     for epoch in range(train_config['num_epochs']):
         print(f"Starting epoch: {epoch}")
         for c, batch in enumerate(tqdm(data_loader)):
@@ -73,11 +81,13 @@ def _training_loop(model: nn.Module,
             losses.append(loss.item())
             if c % LOG_EVERY == 0:
                 print(f"Step: {c}, Loss: {loss.item():.4f}")
+            if return_checkpoints and c % CHECKPOINT_EVERY == 0:
+                checkpoints.append(deepcopy(model))
             if save_checkpoints and c % CHECKPOINT_EVERY == 0:
                 upload_hf_model(model, run_name, checkpoint_name=f"checkpoint_{c:0>{CHECKPOINT_ZERO_PAD}d}")
             if c > train_config['max_steps']:
                 break
-    return losses
+    return losses, checkpoints
 
 
 def _num_samples(train_config: dict) -> int:
