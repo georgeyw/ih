@@ -4,15 +4,16 @@ import random
 import torch
 import torch.nn as nn
 from tqdm import tqdm
-from torch.utils.data import TensorDataset
+from torch.utils.data import Dataset
 
 from ih.utils import read_dgp_config
 
 
 # generates ~1.5M tokens per second
 # do I want this to be strings or ints? I think ints
-class DGP:
+class DGP(Dataset):
     def __init__(self,
+                 num_samples: int,
                  ctx_length: int = 32,
                  num_tokens: int = 10,
                  bigrams: List[List[int]] = None,
@@ -23,6 +24,7 @@ class DGP:
                  induction_freq: float = 0.1,
                  seed: int = None,
                  device: str = 'cpu'):
+        self.num_samples = num_samples
         self.ctx_length = ctx_length
         self.num_tokens = num_tokens
         self.alphabet = list(range(num_tokens))
@@ -41,20 +43,11 @@ class DGP:
         self.device = device
         self._validate_params()
 
-    def generate_dataset(self, num_samples):
-        samples = self.generate_samples(num_samples)
-        dataset = TensorDataset(samples)
-        return dataset
-
-    def generate_samples(self, num_samples):
-        samples = []
-        if self.seed is None:
-            for _ in tqdm(range(num_samples)):
-                samples.append(self._generate_sample())
-        else:
-            for i in tqdm(range(num_samples)):
-                samples.append(self._generate_sample(seed=self.seed + i))
-        return torch.stack(samples).to(self.device)
+    def __len__(self):
+        return self.num_samples
+    
+    def __getitem__(self, idx):
+        return self._generate_sample(seed=self.seed + idx)
 
     def _generate_sample(self, return_i_seq: bool = False, seed: int = None):
         random.seed(seed)
@@ -108,10 +101,9 @@ class DGP:
                 assert trigram[2] in self.alphabet
 
 
-def build_dgp_for_model(model: nn.Module, dgp_config_name: str = None) -> DGP:
-    if dgp_config_name is None:
-        dgp_config_name = 'default.json'
+def build_dgp_for_model(model: nn.Module, dgp_config_name: str, num_samples: int) -> DGP:
     dgp_config = read_dgp_config(dgp_config_name)
+    dgp_config['num_samples'] = num_samples
     dgp_config['ctx_length'] = model.cfg.n_ctx
     dgp_config['num_tokens'] = model.cfg.d_vocab
     dgp_config['seed'] = model.cfg.seed

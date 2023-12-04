@@ -37,9 +37,9 @@ def train(model_config_name: str,
     if train_config['seed'] is not None:
         torch.manual_seed(train_config['seed'])
     model = build_model(model_config_name, device=device)
-    dgp = build_dgp_for_model(model, dgp_config_name)
-    dataset = dgp.generate_dataset(_num_samples(train_config))
-    loader = DataLoader(dataset, batch_size=train_config['batch_size'])
+    num_samples = train_config['batch_size'] * train_config['max_steps']
+    dgp = build_dgp_for_model(model, dgp_config_name, num_samples)
+    loader = DataLoader(dgp, batch_size=train_config['batch_size'])
     optimizer = torch.optim.AdamW(model.parameters(),
                                   lr=train_config['learning_rate'],
                                   weight_decay=train_config['weight_decay'])
@@ -73,7 +73,7 @@ def _training_loop(model: nn.Module,
         print(f"Starting epoch: {epoch}")
         for c, batch in enumerate(tqdm(data_loader)):
             optimizer.zero_grad()
-            tokens = batch[0].to(device)
+            tokens = batch.to(device)
             logits = model(tokens)
             loss = lm_cross_entropy_loss(logits, tokens)
             loss.backward()
