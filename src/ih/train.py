@@ -1,4 +1,5 @@
 from copy import deepcopy
+from typing import Union
 
 import torch
 import torch.nn as nn
@@ -9,7 +10,7 @@ from transformer_lens.utils import lm_cross_entropy_loss
 from ih.utils import create_hf_repo
 from ih.utils import upload_hf_model
 from ih.utils import upload_hf_model_configs
-from ih.utils import read_train_config
+from ih.utils import read_config
 from ih.constants import CHECKPOINT_EVERY
 from ih.constants import CHECKPOINT_ZERO_PAD
 from ih.constants import LOG_EVERY
@@ -17,9 +18,9 @@ from ih.dgp import build_dgp_for_model
 from ih.model import build_model
 
 
-def train(model_config_name: str,
-          dgp_config_name: str,
-          train_config_name: str,
+def train(model_config: Union[str, dict],
+          dgp_config: Union[str, dict],
+          train_config: Union[str, dict],
           run_name: str = None,
           save_checkpoints: bool = False,
           return_checkpoints: bool = False,
@@ -29,16 +30,16 @@ def train(model_config_name: str,
             raise ValueError("Must provide run_name if saving checkpoints")
         create_hf_repo(run_name)
         upload_hf_model_configs(model_name=run_name, 
-                                model_config_name=model_config_name, 
-                                dgp_config_name=dgp_config_name, 
-                                train_config_name=train_config_name)
-    
-    train_config = read_train_config(train_config_name)
+                                model_config=model_config, 
+                                dgp_config=dgp_config, 
+                                train_config=train_config)
+    if isinstance(train_config, str):
+        train_config = read_config(train_config, 'train')
     if train_config['seed'] is not None:
         torch.manual_seed(train_config['seed'])
-    model = build_model(model_config_name, device=device)
+    model = build_model(model_config, device=device)
     num_samples = train_config['batch_size'] * train_config['max_steps']
-    dgp = build_dgp_for_model(model, dgp_config_name, num_samples)
+    dgp = build_dgp_for_model(model, dgp_config, num_samples)
     loader = DataLoader(dgp, batch_size=train_config['batch_size'])
     optimizer = torch.optim.AdamW(model.parameters(),
                                   lr=train_config['learning_rate'],

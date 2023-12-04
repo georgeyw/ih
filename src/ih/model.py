@@ -1,14 +1,16 @@
+from typing import Union
 import warnings
 import torch.nn as nn
 
 from transformer_lens import HookedTransformer, HookedTransformerConfig
-from ih.utils import read_model_config
+from ih.utils import read_config
 
 
-def build_model(config_name: str = None, device = 'cpu', **kwargs) -> nn.Module:
-    if config_name is None:
-        config_name = 'default-L1.json'
-    config = read_model_config(config_name)
+def build_model(config: Union[str, dict] = None, device = 'cpu', **kwargs) -> nn.Module:
+    if config is None:
+        config = 'default-L1.json'
+    if isinstance(config, str):
+        config = read_config(config, 'model')
     config['device'] = device
 
     original_config = config.copy()

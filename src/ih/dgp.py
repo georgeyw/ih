@@ -1,12 +1,11 @@
-from typing import List
+from typing import List, Union
 
 import random
 import torch
 import torch.nn as nn
-from tqdm import tqdm
 from torch.utils.data import Dataset
 
-from ih.utils import read_dgp_config
+from ih.utils import read_config
 
 
 # generates ~1.5M tokens per second
@@ -101,8 +100,9 @@ class DGP(Dataset):
                 assert trigram[2] in self.alphabet
 
 
-def build_dgp_for_model(model: nn.Module, dgp_config_name: str, num_samples: int) -> DGP:
-    dgp_config = read_dgp_config(dgp_config_name)
+def build_dgp_for_model(model: nn.Module, dgp_config: Union[str, dict], num_samples: int) -> DGP:
+    if isinstance(dgp_config, str):
+        dgp_config = read_config(dgp_config, 'dgp')
     dgp_config['num_samples'] = num_samples
     dgp_config['ctx_length'] = model.cfg.n_ctx
     dgp_config['num_tokens'] = model.cfg.d_vocab

@@ -1,6 +1,7 @@
 import json
 import os
 import tempfile
+from typing import Union
 
 import dotenv
 import torch
@@ -32,43 +33,16 @@ def colab_env_setup() -> None:
 ####### config utils #######
 ############################
 
-def read_dgp_config(config_name) -> dict:
-    path = _get_dgp_config_path(config_name)
+def _get_config_path(config_name: str, type: str) -> str:
+    if not config_name.endswith('.json'):
+        config_name += '.json'
+    return os.path.join(os.path.dirname(__file__), f'{type}_configs', config_name)
+
+def read_config(config_name: str, type: str) -> dict:
+    path = _get_config_path(config_name, type)
     with open(path, 'r', encoding='utf-8') as f:
         config = json.load(f)
         return config
-
-
-def _get_dgp_config_path(config_name: str) -> str:
-    if not config_name.endswith('.json'):
-        config_name += '.json'
-    return os.path.join(os.path.dirname(__file__), 'dgp_configs', config_name)
-
-
-def read_model_config(config_name) -> dict:
-    path = _get_model_config_path(config_name)
-    with open(path, 'r', encoding='utf-8') as f:
-        config = json.load(f)
-        return config
-
-
-def _get_model_config_path(config_name: str) -> str:
-    if not config_name.endswith('.json'):
-        config_name += '.json'
-    return os.path.join(os.path.dirname(__file__), 'model_configs', config_name)
-
-
-def read_train_config(config_name) -> dict:
-    path = _get_train_config_path(config_name)
-    with open(path, 'r', encoding='utf-8') as f:
-        config = json.load(f)
-        return config
-
-
-def _get_train_config_path(config_name: str) -> str:
-    if not config_name.endswith('.json'):
-        config_name += '.json'
-    return os.path.join(os.path.dirname(__file__), 'train_configs', config_name)
 
 
 ############################
@@ -129,37 +103,48 @@ def load_hf_config(model_name: str, config_type: str) -> dict:
 
 
 def upload_hf_model_configs(model_name: str,
-                            model_config_name: str,
-                            dgp_config_name: str,
-                            train_config_name: str,
+                            model_config: Union[str, dict],
+                            dgp_config: Union[str, dict],
+                            train_config: Union[str, dict],
                             ) -> str:
     repo_id = os.environ['HF_AUTHOR'] + '/' + model_name
     assert HF_API.token is not None, "Missing HF token"
     assert _check_model_exists(model_name), f"Model repo at {repo_id} does not exist"
 
-    if not model_config_name.endswith('.json'):
-        model_config_name += '.json'
-    if not dgp_config_name.endswith('.json'):
-        dgp_config_name += '.json'
-    if not train_config_name.endswith('.json'):
-        train_config_name += '.json'
+    def get_name_and_config(config: Union[str, dict], type: str) -> (str, dict):
+        if isinstance(config, dict):
+            name = 'custom.json'
+        if isinstance(config, str):
+            name = config
+            config = read_config(name, type)
+        if not name.endswith('.json'):
+            name += '.json'
+        return name, config
 
-    model_config_path = _get_model_config_path(model_config_name)
-    dgp_config_path = _get_dgp_config_path(dgp_config_name)
-    train_config_path = _get_train_config_path(train_config_name)
+    model_config_name, model_config = get_name_and_config(model_config, 'model')
+    dgp_config_name, dgp_config = get_name_and_config(dgp_config, 'dgp')
+    train_config_name, train_config = get_name_and_config(train_config, 'train')
 
-    _upload_hf_file(path_or_fileobj=model_config_path,
-                    path_in_repo=f'configs/model/{model_config_name}',
-                    repo_id=repo_id,
-                    repo_type='model')
-    _upload_hf_file(path_or_fileobj=dgp_config_path,
-                    path_in_repo=f'configs/dgp/{dgp_config_name}',
-                    repo_id=repo_id,
-                    repo_type='model')
-    _upload_hf_file(path_or_fileobj=train_config_path,
-                    path_in_repo=f'configs/train/{train_config_name}',
-                    repo_id=repo_id,
-                    repo_type='model')
+    def upload(name: str, config: dict, type: str):
+        if name == 'custom.json':
+            with tempfile.TemporaryDirectory() as temp_dir:
+                config_path = os.path.join(temp_dir, name)
+                with open(config_path, 'w', encoding='utf-8') as f:
+                    json.dump(config, f)
+                _upload_hf_file(path_or_fileobj=config_path,
+                                path_in_repo=f'configs/{type}/{name}',
+                                repo_id=repo_id,
+                                repo_type='model')
+        else:
+            config_path = _get_config_path(name, type)
+            _upload_hf_file(path_or_fileobj=config_path,
+                            path_in_repo=f'configs/{type}/{name}',
+                            repo_id=repo_id,
+                            repo_type='model')
+    
+    upload(model_config_name, model_config, 'model')
+    upload(dgp_config_name, dgp_config, 'dgp')
+    upload(train_config_name, train_config, 'train')
 
 
 def upload_hf_model(model: nn.Module,
