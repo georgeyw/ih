@@ -46,7 +46,9 @@ class DGP(Dataset):
         return self.num_samples
     
     def __getitem__(self, idx):
-        return self._generate_sample(seed=self.seed + idx)
+        if self.seed:
+            return self._generate_sample(seed=self.seed)
+        return self._generate_sample()
 
     def _generate_sample(self, return_i_seq: bool = False, seed: int = None):
         random.seed(seed)
@@ -100,7 +102,7 @@ class DGP(Dataset):
                 assert trigram[2] in self.alphabet
 
 
-def build_dgp_for_model(model: nn.Module, dgp_config: Union[str, dict], num_samples: int) -> DGP:
+def build_dgp_for_model(model: nn.Module, dgp_config: Union[str, dict], num_samples: int, seed: int = None) -> DGP:
     if isinstance(dgp_config, str):
         dgp_config = read_config(dgp_config, 'dgp')
     dgp_config['num_samples'] = num_samples

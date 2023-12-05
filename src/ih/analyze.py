@@ -88,11 +88,11 @@ def estimate_llc_from_hf(repo_id: str,
     # load model from HF
     checkpoint_name = f"checkpoint_{checkpoint_step:0>{CHECKPOINT_ZERO_PAD}d}"
     model = load_hf_model(repo_id, checkpoint_name=checkpoint_name)
+    model.cfg.seed = seed
 
     # build DGP
     if isinstance(dgp_config, str):
         dgp_config = read_config(dgp_config, 'dgp')
-    dgp_config['seed'] = seed
     dgp = build_dgp_for_model(model, dgp_config, num_draws)
 
     # build dataloader
