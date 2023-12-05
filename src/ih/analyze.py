@@ -1,10 +1,18 @@
 import datetime
-import wandb
+from typing import Union
 
-from ih.constants import WANDB_ENTITY, WANDB_PROJECT
-from ih.utils import read_dgp_config
-from ih.utils import read_model_config
-from ih.utils import read_train_config
+import torch
+import wandb
+from transformer_lens.utils import lm_cross_entropy_loss
+from devinterp.slt.llc import estimate_learning_coeff_with_summary
+from devinterp.optim import SGLD
+
+from ih.constants import CHECKPOINT_ZERO_PAD
+from ih.constants import WANDB_ENTITY
+from ih.constants import WANDB_PROJECT
+from ih.dgp import build_dgp_for_model
+from ih.utils import load_hf_model
+from ih.utils import read_config
 
 
 # TODO(george): finish setting up wandb
@@ -34,7 +42,7 @@ def _build_run_name(model_config_name: str,
     else:
         name = f'[model={model_config_name},dgp={dgp_config_name},train={train_config_name}]'
 
-    model_config = read_model_config(model_config_name)
+    model_config = read_config(model_config_name, 'model')
     name += f"L{model_config['n_layers']}"
     name += f"W{model_config['d_model']}"
 
@@ -43,7 +51,73 @@ def _build_run_name(model_config_name: str,
         name += datetime.datetime.now().strftime("%m-%d")
 
     # check that other configs exist
-    read_dgp_config(dgp_config_name)
-    read_train_config(train_config_name)
+    read_config(dgp_config_name, 'model')
+    read_config(train_config_name, 'model')
 
     return name
+
+def _custom_collate(batch):
+    batch = torch.stack(batch)
+    return [batch, batch.clone()]
+
+def _build_llc_dataloader(dataset, training_cfg, num_workers=0):
+
+    return torch.utils.data.DataLoader(dataset,
+                                        batch_size=training_cfg['batch_size'],
+                                        collate_fn=_custom_collate,
+                                        shuffle=True,
+                                        num_workers=num_workers,
+                                        pin_memory=True)
+
+        # tokens = [item for item in batch]
+        # tokens_tensor = torch.stack(tokens)
+        # return [tokens_tensor, tokens_tensor.clone()]
+
+def estimate_llc_from_hf(repo_id: str, 
+                         checkpoint_step: int,
+                         dgp_config: Union[str, dict],
+                         batch_size: int,
+                         num_chains: int, 
+                         num_draws: int,
+                         learning_rate: float,
+                         elasticity: float,
+                         num_samples: int,
+                         num_workers: int = 0,
+                         device: str = 'cpu',
+                         seed: int = None):
+    # load model from HF
+    checkpoint_name = f"checkpoint_{checkpoint_step:0>{CHECKPOINT_ZERO_PAD}d}"
+    model = load_hf_model(repo_id, checkpoint_name=checkpoint_name)
+
+    # build DGP
+    if isinstance(dgp_config, str):
+        dgp_config = read_config(dgp_config, 'dgp')
+    dgp_config['seed'] = seed
+    dgp = build_dgp_for_model(model, dgp_config, num_draws)
+
+    # build dataloader
+    loader = _build_llc_dataloader(dgp, {'batch_size': batch_size}, num_workers=num_workers)
+
+    # build optimizer
+    optim_kwargs = dict(
+        lr=learning_rate,
+        noise_level=1.0,
+        elasticity=elasticity,
+        num_samples=num_samples,
+        temperature="adaptive",
+    )
+
+    results = estimate_learning_coeff_with_summary(
+        model=model,
+        loader=loader,
+        criterion=lm_cross_entropy_loss,
+        sampling_method=SGLD,
+        optimizer_kwargs=optim_kwargs,
+        num_chains=num_chains,
+        num_draws=num_draws,
+        device=device,
+        online=True,
+    )
+
+    return results
+

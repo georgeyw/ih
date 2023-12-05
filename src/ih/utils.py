@@ -62,7 +62,11 @@ def create_hf_repo(name: str, **kwargs) -> str:
 
 
 def load_hf_model(model_name: str, checkpoint_name: str = None) -> nn.Module:
-    repo_id = os.environ['HF_AUTHOR'] + '/' + model_name
+    repo_id = model_name
+    if not repo_id.startswith(os.environ['HF_AUTHOR']):
+        repo_id = os.environ['HF_AUTHOR'] + '/' + model_name
+    if model_name.startswith(os.environ['HF_AUTHOR']):
+        model_name = model_name.split('/')[1]
     assert HF_API.token is not None, "Missing HF token"
     assert _check_model_exists(model_name), f"Model repo at {repo_id} does not exist"
 
