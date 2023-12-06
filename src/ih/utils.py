@@ -51,7 +51,7 @@ def read_config(config_name: str, type: str) -> dict:
 
 HF_API = HfApi(
     endpoint="https://huggingface.co",
-    token=None,
+    token=os.environ['HF_API_KEY'] if 'HF_API_KEY' in os.environ else None,
 )
 HF_MODEL_NAME = 'model.pth'
 

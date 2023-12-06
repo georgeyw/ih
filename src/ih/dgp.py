@@ -47,7 +47,7 @@ class DGP(Dataset):
     
     def __getitem__(self, idx):
         if self.seed:
-            return self._generate_sample(seed=self.seed)
+            return self._generate_sample(seed=self.seed + idx)
         return self._generate_sample()
 
     def _generate_sample(self, return_i_seq: bool = False, seed: int = None):
@@ -108,6 +108,6 @@ def build_dgp_for_model(model: nn.Module, dgp_config: Union[str, dict], num_samp
     dgp_config['num_samples'] = num_samples
     dgp_config['ctx_length'] = model.cfg.n_ctx
     dgp_config['num_tokens'] = model.cfg.d_vocab
-    dgp_config['seed'] = model.cfg.seed
+    dgp_config['seed'] = seed or model.cfg.seed
     dgp = DGP(**dgp_config)
     return dgp
