@@ -10,7 +10,7 @@ prettytable==3.9.0
 pydantic==2.1.1
 pydantic_core==2.4.0
 python-dotenv==1.0.0
-torch==2.1.0
+torch==2.2.0
 torchtyping==0.1.4
 tqdm==4.65.0
 transformer_lens==1.10.0
